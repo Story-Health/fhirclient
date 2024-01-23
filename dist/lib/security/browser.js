@@ -1,7 +1,5 @@
 "use strict";
 
-require("core-js/modules/es.typed-array.set.js");
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
@@ -9,7 +7,14 @@ exports.signCompactJws = exports.importJWK = exports.generatePKCEChallenge = exp
 
 const js_base64_1 = require("js-base64");
 
-const crypto = typeof globalThis === "object" && globalThis.crypto ? globalThis.crypto : require("isomorphic-webcrypto").default;
+const crypto = (() => {
+  if (typeof globalThis === "object" && globalThis.crypto) {
+    return globalThis.crypto;
+  }
+
+  throw new Error("window.crypto does not exist in this browser");
+})();
+
 const subtle = crypto.subtle;
 const ALGS = {
   ES384: {
@@ -21,7 +26,7 @@ const ALGS = {
     modulusLength: 4096,
     publicExponent: new Uint8Array([1, 0, 1]),
     hash: {
-      name: 'SHA-384'
+      name: "SHA-384"
     }
   }
 };
@@ -34,7 +39,7 @@ exports.randomBytes = randomBytes;
 
 async function digestSha256(payload) {
   const prepared = new TextEncoder().encode(payload);
-  const hash = await subtle.digest('SHA-256', prepared);
+  const hash = await subtle.digest("SHA-256", prepared);
   return new Uint8Array(hash);
 }
 
@@ -58,7 +63,7 @@ async function importJWK(jwk) {
     throw new Error('The "alg" property of the JWK must be set to "ES384" or "RS384"');
   } // Use of the "key_ops" member is OPTIONAL, unless the application requires its presence.
   // https://www.rfc-editor.org/rfc/rfc7517.html#section-4.3
-  // 
+  //
   // In our case the app will only import private keys so we can assume "sign"
 
 
@@ -88,7 +93,7 @@ async function signCompactJws(alg, privateKey, header, payload) {
   const jwtPayload = JSON.stringify(payload);
   const jwtAuthenticatedContent = `${(0, js_base64_1.encodeURL)(jwtHeader)}.${(0, js_base64_1.encodeURL)(jwtPayload)}`;
   const signature = await subtle.sign(Object.assign(Object.assign({}, privateKey.algorithm), {
-    hash: 'SHA-384'
+    hash: "SHA-384"
   }), privateKey, new TextEncoder().encode(jwtAuthenticatedContent));
   return `${jwtAuthenticatedContent}.${(0, js_base64_1.fromUint8Array)(new Uint8Array(signature), true)}`;
 }
